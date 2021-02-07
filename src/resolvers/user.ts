@@ -7,7 +7,7 @@ import {
   Mutation,
   ObjectType,
   Query,
-  Resolver,
+  Resolver
 } from 'type-graphql';
 import { User } from '../entities/User';
 import { MyContext } from '../types';
