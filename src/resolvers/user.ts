@@ -117,7 +117,6 @@ export class UserResolver {
     @Arg('password') password: string,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
-    console.log('🐶 jestem tu: ', usernameOrEmail)
     const isEmail = validateEmail(usernameOrEmail)
     const user = await em.findOne(User, isEmail ? { email: usernameOrEmail }:{ username: usernameOrEmail });
 
