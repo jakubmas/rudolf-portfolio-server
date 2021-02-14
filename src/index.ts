@@ -13,9 +13,15 @@ import { HelloResolver } from './resolvers/hello';
 import { SessionResolver } from './resolvers/session';
 import { UserResolver } from './resolvers/user';
 import { MyContext } from './types';
+import { sendEmail } from './utils/sendEmail';
 
 const main = async () => {
+  sendEmail('jak.maslowski@gmail.com', 'co tam byku')
+
   const orm = await MikroORM.init(microConfig);
+
+  // await orm.em.nativeDelete(User, {})
+
   await orm.getMigrator().up();
 
   const app = express();

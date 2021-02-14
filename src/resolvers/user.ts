@@ -12,11 +12,13 @@ import {
 import { COOKIE_NAME } from '../constants';
 import { User } from '../entities/User';
 import { MyContext } from '../types';
-
+import { customErrorMessage, validateEmail } from '../utils/validation';
 @InputType()
-class UsernamePasswordInput {
+class UsernameEmailPasswordInput {
   @Field()
   username: string;
+  @Field()
+  email: string;
   @Field()
   password: string;
 }
@@ -40,6 +42,19 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Mutation(()=>Boolean)
+  async forgotPassword(
+    @Arg('email') email: string,
+    // @Ctx() {req} : MyContext
+  ) {
+    if(!validateEmail(email)){
+      return customErrorMessage('email','Email in incorrect')      
+    }
+
+    // const user = await em.findOne(User, {email})
+    return true
+  }
+
   @Query(() => User, { nullable: true })
   async me(@Ctx() { req, em }: MyContext) {
     if (!req.session.userId) {
@@ -50,44 +65,43 @@ export class UserResolver {
       const user = await em.findOne(User, { id: req.session.userId });
       return user;
     } catch (error) {
-      return {
-        errors: [{ field: 'username', message: 'Username not found' }],
-      };
+      return customErrorMessage('username','Username not found')
     }
   }
 
   @Mutation(() => UserResponse)
   async register(
-    @Arg('options') options: UsernamePasswordInput,
+    @Arg('options') options: UsernameEmailPasswordInput,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
     if (options.username.length <= 2) {
-      return {
-        errors: [
-          { field: 'username', message: 'Length must be greater than 2' },
-        ],
-      };
+      return customErrorMessage('username','Length must be greater than 2')
     }
 
     const userExist = await em.findOne(User, { username: options.username });
 
     if (userExist) {
-      return {
-        errors: [{ field: 'username', message: 'That username is taken' }],
-      };
+      return customErrorMessage('username', 'That username is taken') 
+    }
+
+    if(!validateEmail(options.email)) {
+      return customErrorMessage('email', 'That email is incorrect') 
+    }
+
+    const emailExist = await em.findOne(User, {email: options.email})
+    
+    if (emailExist) {
+      return customErrorMessage('email', 'That email is taken') 
     }
 
     if (options.password.length <= 4) {
-      return {
-        errors: [
-          { field: 'password', message: 'Password must be greater than 4' },
-        ],
-      };
+      return customErrorMessage('password', 'Password must be greater than 4') 
     }
 
     const hashedPassword = await argon2.hash(options.password);
     const user = em.create(User, {
       username: options.username,
+      email: options.email,
       password: hashedPassword,
     });
     await em.persistAndFlush(user);
@@ -99,23 +113,22 @@ export class UserResolver {
 
   @Mutation(() => UserResponse)
   async login(
-    @Arg('options') options: UsernamePasswordInput,
+    @Arg('usernameOrEmail') usernameOrEmail: string,
+    @Arg('password') password: string,
     @Ctx() { em, req }: MyContext
   ): Promise<UserResponse> {
-    const user = await em.findOne(User, { username: options.username });
+    console.log('🐶 jestem tu: ', usernameOrEmail)
+    const isEmail = validateEmail(usernameOrEmail)
+    const user = await em.findOne(User, isEmail ? { email: usernameOrEmail }:{ username: usernameOrEmail });
 
     if (!user) {
-      return {
-        errors: [{ field: 'username', message: "that username doesn't exist" }],
-      };
+      return customErrorMessage('usernameOrEmail', "That user doesn't exist") 
     }
 
-    const valid = await argon2.verify(user.password, options.password);
+    const valid = await argon2.verify(user.password, password);
 
     if (!valid) {
-      return {
-        errors: [{ field: 'password', message: 'incorrect password' }],
-      };
+      return customErrorMessage('password', 'incorrect password') 
     }
 
     req.session.userId = user.id;
