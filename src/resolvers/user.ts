@@ -9,10 +9,13 @@ import {
   Query,
   Resolver
 } from 'type-graphql';
-import { COOKIE_NAME } from '../constants';
+import { v4 } from 'uuid';
+import { COOKIE_NAME, FORGET_PASSWORD_PREFIX } from '../constants';
 import { User } from '../entities/User';
 import { MyContext } from '../types';
+import { sendEmail } from '../utils/sendEmail';
 import { customErrorMessage, validateEmail } from '../utils/validation';
+
 @InputType()
 class UsernameEmailPasswordInput {
   @Field()
@@ -42,16 +45,59 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Mutation(()=>UserResponse) 
+  async changePassword(
+    @Arg('token') token: string,
+    @Arg('newPassword') newPassword: string,
+    @Ctx() {redis, em, req}: MyContext
+  ): Promise<UserResponse> {
+    if (newPassword.length <= 4) {
+      return customErrorMessage('newPassword', 'Password must be greater than 4') 
+    }
+
+    const key = FORGET_PASSWORD_PREFIX + token
+    const userId = await redis.get(key)
+    if(!userId) {
+      return customErrorMessage('token', 'Token expired') 
+    }
+
+    const user = await em.findOne(User, {id: parseInt(userId)})
+
+    if(!user) {
+      return customErrorMessage('token', 'User no longer exist') 
+    }
+
+    user.password = await argon2.hash(newPassword)
+    em.persistAndFlush(user)
+
+    await redis.del(key)
+    // log in user after change password
+    req.session.userId = user.id
+
+    return {user}
+  }
+
   @Mutation(()=>Boolean)
   async forgotPassword(
     @Arg('email') email: string,
-    // @Ctx() {req} : MyContext
+    @Ctx() {em, redis} : MyContext
   ) {
     if(!validateEmail(email)){
       return customErrorMessage('email','Email in incorrect')      
     }
 
-    // const user = await em.findOne(User, {email})
+    const user = await em.findOne(User, {email})
+
+    if(!user) {
+      return true
+    }
+
+    const token = v4()
+    
+    await redis.set(FORGET_PASSWORD_PREFIX + token, user.id, 'ex', 1000 * 60 * 60 * 24 * 3) //3 days
+
+    sendEmail(email, `<a href="http://localhost:3000/backoffice/change-password/${token}">Reset Password</a>`)
+
     return true
   }
 

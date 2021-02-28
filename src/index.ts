@@ -4,7 +4,7 @@ import connectRedis from 'connect-redis';
 import cors from 'cors';
 import express from 'express';
 import session from 'express-session';
-import redis from 'redis';
+import Redis from 'ioredis';
 import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
 import { COOKIE_NAME, __prod__ } from './constants';
@@ -26,8 +26,10 @@ const main = async () => {
 
   const app = express();
 
+  // Redis
   const RedisStore = connectRedis(session);
-  const redisClient = redis.createClient();
+  const redis = new Redis(process.env.REDIS_URL);
+  app.set('trust proxy', 1);
 
   app.use(cors({
     origin: "http://localhost:3000",
@@ -37,7 +39,10 @@ const main = async () => {
   app.use(
     session({
       name: COOKIE_NAME,
-      store: new RedisStore({ client: redisClient, disableTouch: true }),
+      store: new RedisStore({
+        client: redis as any,
+        disableTouch: true,
+      }),
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 365,
         httpOnly: true,
@@ -59,6 +64,7 @@ const main = async () => {
       em: orm.em,
       req,
       res,
+      redis
     }),
   });
 
