@@ -1,46 +1,40 @@
-import { Arg, Ctx, Mutation, Query, Resolver } from 'type-graphql';
+import { Arg, Mutation, Query, Resolver } from 'type-graphql';
 import { Session } from '../entities/Session';
-import { MyContext } from '../types';
 
 @Resolver()
 export class SessionResolver {
   @Query(() => [Session])
-  sessions(@Ctx() { em }: MyContext): Promise<Session[]> {
-    return em.find(Session, {});
+  sessions(): Promise<Session[]> {
+    return Session.find();
   }
 
   @Query(() => Session, { nullable: true })
   session(
     @Arg('id') id: number,
-    @Ctx() { em }: MyContext
-  ): Promise<Session | null> {
-    return em.findOne(Session, { id });
+  ): Promise<Session | undefined> {
+    return Session.findOne( id);
   }
 
   @Mutation(() => Session)
   async createSession(
     @Arg('title') title: string,
-    @Ctx() { em }: MyContext
   ): Promise<Session> {
-    const session = em.create(Session, { title });
-    await em.persistAndFlush(session);
-    return session;
+    return Session.create({title}).save();
   }
 
   @Mutation(() => Session, { nullable: true })
   async updateSession(
     @Arg('id') id: number,
     @Arg('title', () => String, { nullable: true }) title: string,
-    @Ctx() { em }: MyContext
-  ): Promise<Session | null> {
-    const session = await em.findOne(Session, { id });
+  ): Promise<Session | undefined> {
+    const session = await Session.findOne(id)
+    
     if (!session) {
-      return null;
+      return undefined;
     }
 
     if (typeof title !== undefined) {
-      session.title = title;
-      await em.persistAndFlush(session);
+      await Session.update({id}, {title})
     }
 
     return session;
@@ -49,9 +43,8 @@ export class SessionResolver {
   @Mutation(() => Boolean)
   async deleteSession(
     @Arg('id') id: number,
-    @Ctx() { em }: MyContext
   ): Promise<boolean> {
-    await em.nativeDelete(Session, { id });
+    Session.delete(id)
     return true;
   }
 }

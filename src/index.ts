@@ -1,29 +1,34 @@
-import { MikroORM } from '@mikro-orm/core';
 import { ApolloServer } from 'apollo-server-express';
 import connectRedis from 'connect-redis';
 import cors from 'cors';
+import 'dotenv-safe/config';
 import express from 'express';
 import session from 'express-session';
 import Redis from 'ioredis';
 import 'reflect-metadata';
 import { buildSchema } from 'type-graphql';
+// import { sendEmail } from './utils/sendEmail';
+import { createConnection } from 'typeorm';
 import { COOKIE_NAME, __prod__ } from './constants';
-import microConfig from './mikro-orm.config';
+import { Session } from './entities/Session';
+import { User } from './entities/User';
 import { HelloResolver } from './resolvers/hello';
 import { SessionResolver } from './resolvers/session';
 import { UserResolver } from './resolvers/user';
 import { MyContext } from './types';
-import { sendEmail } from './utils/sendEmail';
 
 const main = async () => {
-  sendEmail('jak.maslowski@gmail.com', 'co tam byku')
+  
+  const connection = await createConnection({
+    type: 'postgres',
+    url: process.env.DATABASE_URL,
+    logging: true,
+    synchronize: true,
+    entities: [Session, User],
+  })
 
-  const orm = await MikroORM.init(microConfig);
-
-  // await orm.em.nativeDelete(User, {})
-
-  await orm.getMigrator().up();
-
+  connection.runMigrations();
+  
   const app = express();
 
   // Redis
@@ -61,7 +66,6 @@ const main = async () => {
       validate: false,
     }),
     context: ({ req, res }): MyContext => ({
-      em: orm.em,
       req,
       res,
       redis
