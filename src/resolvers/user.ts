@@ -49,7 +49,7 @@ export class UserResolver {
   async changePassword(
     @Arg('token') token: string,
     @Arg('newPassword') newPassword: string,
-    @Ctx() {redis, em, req}: MyContext
+    @Ctx() {redis, req}: MyContext
   ): Promise<UserResponse> {
     if (newPassword.length <= 4) {
       return customErrorMessage('newPassword', 'Password must be greater than 4') 
@@ -61,14 +61,13 @@ export class UserResolver {
       return customErrorMessage('token', 'Token expired') 
     }
 
-    const user = await em.findOne(User, {id: parseInt(userId)})
+    const user = await User.findOne(userId)
 
     if(!user) {
       return customErrorMessage('token', 'User no longer exist') 
     }
 
-    user.password = await argon2.hash(newPassword)
-    em.persistAndFlush(user)
+    User.update({id: parseInt(userId)}, {password: await argon2.hash(newPassword)})
 
     await redis.del(key)
     // log in user after change password
@@ -80,13 +79,13 @@ export class UserResolver {
   @Mutation(()=>Boolean)
   async forgotPassword(
     @Arg('email') email: string,
-    @Ctx() {em, redis} : MyContext
+    @Ctx() {redis} : MyContext
   ) {
     if(!validateEmail(email)){
       return customErrorMessage('email','Email in incorrect')      
     }
 
-    const user = await em.findOne(User, {email})
+    const user = await User.findOne({email})
 
     if(!user) {
       return true
@@ -102,14 +101,13 @@ export class UserResolver {
   }
 
   @Query(() => User, { nullable: true })
-  async me(@Ctx() { req, em }: MyContext) {
+  async me(@Ctx() { req }: MyContext) {
     if (!req.session.userId) {
       return null;
     }
 
     try {
-      const user = await em.findOne(User, { id: req.session.userId });
-      return user;
+      return await User.findOne({ id: req.session.userId });
     } catch (error) {
       return customErrorMessage('username','Username not found')
     }
@@ -118,41 +116,36 @@ export class UserResolver {
   @Mutation(() => UserResponse)
   async register(
     @Arg('options') options: UsernameEmailPasswordInput,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
+
     if (options.username.length <= 2) {
       return customErrorMessage('username','Length must be greater than 2')
-    }
-
-    const userExist = await em.findOne(User, { username: options.username });
-
-    if (userExist) {
-      return customErrorMessage('username', 'That username is taken') 
     }
 
     if(!validateEmail(options.email)) {
       return customErrorMessage('email', 'That email is incorrect') 
     }
+    
+    if (options.password.length <= 4) {
+      return customErrorMessage('password', 'Password must be greater than 4') 
+    }
 
-    const emailExist = await em.findOne(User, {email: options.email})
+    const emailExist = await User.findOne({email: options.email})
     
     if (emailExist) {
       return customErrorMessage('email', 'That email is taken') 
     }
 
-    if (options.password.length <= 4) {
-      return customErrorMessage('password', 'Password must be greater than 4') 
-    }
-
     const hashedPassword = await argon2.hash(options.password);
-    const user = em.create(User, {
+    
+    const user = await User.create({
       username: options.username,
       email: options.email,
       password: hashedPassword,
-    });
-    await em.persistAndFlush(user);
+    }).save()
 
-    req.session.userId = user.id;
+    req.session!.userId = user.id;
 
     return { user };
   }
@@ -161,10 +154,10 @@ export class UserResolver {
   async login(
     @Arg('usernameOrEmail') usernameOrEmail: string,
     @Arg('password') password: string,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponse> {
     const isEmail = validateEmail(usernameOrEmail)
-    const user = await em.findOne(User, isEmail ? { email: usernameOrEmail }:{ username: usernameOrEmail });
+    const user = await User.findOne(isEmail ? { email: usernameOrEmail }:{ username: usernameOrEmail });
 
     if (!user) {
       return customErrorMessage('usernameOrEmail', "That user doesn't exist") 
