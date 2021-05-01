@@ -27,6 +27,10 @@ const main = async () => {
     entities: [Session, User],
   })
 
+  // TODO set synchronize to false and uncomment entity that you want to drop DB for
+  // await Session.delete({})
+  // await User.delete({})
+
   connection.runMigrations();
   
   const app = express();

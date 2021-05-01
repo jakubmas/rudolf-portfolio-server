@@ -1,12 +1,24 @@
 import { Field, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity, Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { User } from './User';
 
 @ObjectType()
 @Entity()
 export class Session extends BaseEntity {
   @Field()
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Field()
+  @Column({  unique: true })
+  title!: string;
+
+  @Field()
+  @Column()
+  creatorId: string
+
+  @ManyToOne(() => User, user => user.sessions)
+  creator: User
 
   @Field(() => String)
   @CreateDateColumn()
@@ -15,7 +27,4 @@ export class Session extends BaseEntity {
   @Field(() => String)
   @UpdateDateColumn()
   updatedAt: Date
-
-  @Column()
-  title!: string;
 }

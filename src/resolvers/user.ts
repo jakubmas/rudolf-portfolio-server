@@ -67,7 +67,7 @@ export class UserResolver {
       return customErrorMessage('token', 'User no longer exist') 
     }
 
-    User.update({id: parseInt(userId)}, {password: await argon2.hash(newPassword)})
+    User.update({id: userId}, {password: await argon2.hash(newPassword)})
 
     await redis.del(key)
     // log in user after change password
@@ -169,8 +169,7 @@ export class UserResolver {
       return customErrorMessage('password', 'incorrect password') 
     }
 
-    req.session.userId = user.id;
-
+    req.session!.userId = user.id;
     return { user };
   }
 
