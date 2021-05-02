@@ -1,6 +1,6 @@
 import { Field, ObjectType } from 'type-graphql';
 import { BaseEntity, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { Session } from './Session';
+import { BackofficeFolder } from './BackofficeFolder';
 @ObjectType()
 @Entity()
 export class User extends BaseEntity{
@@ -19,8 +19,8 @@ export class User extends BaseEntity{
   @Column()
   password!: string;
 
-  @OneToMany(()=> Session, session => session.creator)
-  sessions!: Session[]
+  @OneToMany(()=> BackofficeFolder, folder => folder.creator)
+  sessions!: BackofficeFolder[]
 
 
   @Field(() => String)

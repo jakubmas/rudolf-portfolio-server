@@ -4,7 +4,7 @@ import { User } from './User';
 
 @ObjectType()
 @Entity()
-export class Session extends BaseEntity {
+export class BackofficeFolder extends BaseEntity {
   @Field()
   @PrimaryGeneratedColumn('uuid')
   id!: string;
