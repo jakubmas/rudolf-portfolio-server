@@ -20,7 +20,7 @@ export class User extends BaseEntity{
   password!: string;
 
   @OneToMany(()=> BackofficeFolder, folder => folder.creator)
-  sessions!: BackofficeFolder[]
+  folders!: BackofficeFolder[]
 
 
   @Field(() => String)

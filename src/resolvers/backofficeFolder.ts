@@ -1,4 +1,5 @@
 import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Query, Resolver, UseMiddleware } from 'type-graphql';
+import { getConnection } from 'typeorm';
 import { BackofficeFolder } from '../entities/BackofficeFolder';
 import { isAuth } from '../middleware/isAuth';
 import { MyContext } from '../types';
@@ -29,8 +30,8 @@ class BackofficeFolderResponse {
 @Resolver()
 export class BackofficeFolderResolver {
   @Query(() => [BackofficeFolder])
-  backofficeFolders(): Promise<BackofficeFolder[]> {
-    return BackofficeFolder.find();
+  async backofficeFolders(): Promise<BackofficeFolder[]> {
+    return await getConnection().getRepository(BackofficeFolder).find({relations: ["creator"]})
   }
 
   @Query(() => BackofficeFolder, { nullable: true })

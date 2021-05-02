@@ -1,5 +1,6 @@
 import { Field, ObjectType } from 'type-graphql';
-import { BaseEntity, Column, CreateDateColumn, Entity, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { BaseEntity, Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { BackofficePhoto } from './BackofficePhoto';
 import { User } from './User';
 
 @ObjectType()
@@ -17,8 +18,12 @@ export class BackofficeFolder extends BaseEntity {
   @Column()
   creatorId: string
 
-  @ManyToOne(() => User, user => user.sessions)
+  @Field()
+  @ManyToOne(() => User, user => user.folders)
   creator: User
+
+  @OneToMany(()=> BackofficePhoto, photo => photo.folder)
+  photos: BackofficePhoto[]
 
   @Field(() => String)
   @CreateDateColumn()

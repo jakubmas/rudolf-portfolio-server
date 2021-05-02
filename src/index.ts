@@ -11,8 +11,10 @@ import { buildSchema } from 'type-graphql';
 import { createConnection } from 'typeorm';
 import { COOKIE_NAME, __prod__ } from './constants';
 import { BackofficeFolder } from './entities/BackofficeFolder';
+import { BackofficePhoto } from './entities/BackofficePhoto';
 import { User } from './entities/User';
 import { BackofficeFolderResolver } from './resolvers/backofficeFolder';
+import { BackofficePhotoResolver } from './resolvers/backofficePhoto';
 import { HelloResolver } from './resolvers/hello';
 import { UserResolver } from './resolvers/user';
 import { MyContext } from './types';
@@ -23,12 +25,14 @@ const main = async () => {
     type: 'postgres',
     url: process.env.DATABASE_URL,
     logging: true,
-    synchronize: false,
-    entities: [BackofficeFolder, User],
+    synchronize: true,
+    // synchronize: false,
+    entities: [BackofficeFolder, BackofficePhoto, User],
   })
 
   // TODO set synchronize to false and uncomment entity that you want to drop DB for
   // await BackofficeFolder.delete({})
+  // await BackofficePhoto.delete({})
   // await User.delete({})
 
   connection.runMigrations();
@@ -66,7 +70,7 @@ const main = async () => {
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
-      resolvers: [HelloResolver, BackofficeFolderResolver, UserResolver],
+      resolvers: [HelloResolver, BackofficeFolderResolver,BackofficePhotoResolver, UserResolver],
       validate: false,
     }),
     context: ({ req, res }): MyContext => ({
